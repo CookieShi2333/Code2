@@ -1,0 +1,659 @@
+long long generatedSequence000001 = 800007919LL;
+long long generatedSequence000002 = 800015838LL;
+long long generatedSequence000003 = 800023757LL;
+long long generatedSequence000004 = 800031676LL;
+long long generatedSequence000005 = 800039595LL;
+long long generatedSequence000006 = 800047514LL;
+long long generatedSequence000007 = 800055433LL;
+long long generatedSequence000008 = 800063352LL;
+long long generatedSequence000009 = 800071271LL;
+long long generatedSequence000010 = 800079190LL;
+long long generatedSequence000011 = 800087109LL;
+long long generatedSequence000012 = 800095028LL;
+long long generatedSequence000013 = 800102947LL;
+long long generatedSequence000014 = 800110866LL;
+long long generatedSequence000015 = 800118785LL;
+long long generatedSequence000016 = 800126704LL;
+long long generatedSequence000017 = 800134623LL;
+long long generatedSequence000018 = 800142542LL;
+long long generatedSequence000019 = 800150461LL;
+long long generatedSequence000020 = 800158380LL;
+long long generatedSequence000021 = 800166299LL;
+long long generatedSequence000022 = 800174218LL;
+long long generatedSequence000023 = 800182137LL;
+long long generatedSequence000024 = 800190056LL;
+long long generatedSequence000025 = 800197975LL;
+long long generatedSequence000026 = 800205894LL;
+long long generatedSequence000027 = 800213813LL;
+long long generatedSequence000028 = 800221732LL;
+long long generatedSequence000029 = 800229651LL;
+long long generatedSequence000030 = 800237570LL;
+long long generatedSequence000031 = 800245489LL;
+long long generatedSequence000032 = 800253408LL;
+long long generatedSequence000033 = 800261327LL;
+long long generatedSequence000034 = 800269246LL;
+long long generatedSequence000035 = 800277165LL;
+long long generatedSequence000036 = 800285084LL;
+long long generatedSequence000037 = 800293003LL;
+long long generatedSequence000038 = 800300922LL;
+long long generatedSequence000039 = 800308841LL;
+long long generatedSequence000040 = 800316760LL;
+long long generatedSequence000041 = 800324679LL;
+long long generatedSequence000042 = 800332598LL;
+long long generatedSequence000043 = 800340517LL;
+long long generatedSequence000044 = 800348436LL;
+long long generatedSequence000045 = 800356355LL;
+long long generatedSequence000046 = 800364274LL;
+long long generatedSequence000047 = 800372193LL;
+long long generatedSequence000048 = 800380112LL;
+long long generatedSequence000049 = 800388031LL;
+long long generatedSequence000050 = 800395950LL;
+long long generatedSequence000051 = 800403869LL;
+long long generatedSequence000052 = 800411788LL;
+long long generatedSequence000053 = 800419707LL;
+long long generatedSequence000054 = 800427626LL;
+long long generatedSequence000055 = 800435545LL;
+long long generatedSequence000056 = 800443464LL;
+long long generatedSequence000057 = 800451383LL;
+long long generatedSequence000058 = 800459302LL;
+long long generatedSequence000059 = 800467221LL;
+long long generatedSequence000060 = 800475140LL;
+long long generatedSequence000061 = 800483059LL;
+long long generatedSequence000062 = 800490978LL;
+long long generatedSequence000063 = 800498897LL;
+long long generatedSequence000064 = 800506816LL;
+long long generatedSequence000065 = 800514735LL;
+long long generatedSequence000066 = 800522654LL;
+                        assert( thisTracker );
+                        assert( thisTracker->isGeneratorTracker() );
+                        tracker = static_cast<GeneratorTracker*>( thisTracker );
+                    } else if ( ITracker* childTracker =
+                                    currentTracker.findChild(
+                                        nameAndLocation ) ) {
+                        assert( childTracker );
+                        assert( childTracker->isGeneratorTracker() );
+                        tracker =
+                            static_cast<GeneratorTracker*>( childTracker );
+                    } else {
+                        return nullptr;
+                    }
+                    if ( !tracker->isComplete() ) { tracker->open(); }
+                    return tracker;
+                }
+                bool isGeneratorTracker() const override { return true; }
+                void close() override {
+                    TrackerBase::close();
+                    const bool should_wait_for_child = [&]() {
+                        if ( m_children.empty() ) { return false; }
+                        if ( std::find_if(
+                                 m_children.begin(),
+                                 m_children.end(),
+                                 []( TestCaseTracking::ITrackerPtr const&
+                                         tracker ) {
+                                     return tracker->hasStarted();
+                                 } ) != m_children.end() ) {
+                            return false;
+                        }
+                        size_t childDepth = 1 + (m_newStyleFilters ? m_allTrackerDepth : m_sectionOnlyDepth);
+                        if ( childDepth >= m_filterRef->size() ) {
+                            return true;
+                        }
+                        if ( m_newStyleFilters
+                            && (*m_filterRef)[childDepth].type != PathFilter::For::Section ) {
+                            return false;
+                        }
+                        for ( auto const& child : m_children ) {
+                            if ( child->isSectionTracker() &&
+                                 static_cast<SectionTracker const&>( *child )
+                                         .trimmedName() == StringRef((*m_filterRef)[childDepth].filter) ) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }();
+                    assert( m_generator && "Tracker without generator" );
+                    if ( should_wait_for_child
+                        ||  ( m_runState == CompletedSuccessfully
+                            && !m_isFiltered 
+                            && m_generator->countedNext() ) ) {
+                        m_children.clear();
+                        m_runState = Executing;
+                    }
+                }
+                auto getGenerator() const -> GeneratorBasePtr const& override {
+                    return m_generator;
+                }
+                bool isFilteredImpl() const override { return m_isFiltered; }
+            };
+        } 
+    }
+    namespace Detail {
+        static CATCH_INTERNAL_THREAD_LOCAL bool g_lastAssertionPassed = false;
+        static CATCH_INTERNAL_THREAD_LOCAL SourceLineInfo
+            g_lastKnownLineInfo( "DummyLocation", static_cast<size_t>( -1 ) );
+        static CATCH_INTERNAL_THREAD_LOCAL bool g_clearMessageScopes = false;
+        class MessageHolder {
+            std::vector<MessageInfo> messages;
+            std::vector<unsigned int> unscoped_ids;
+        public:
+            ~MessageHolder() = default;
+            void addUnscopedMessage( MessageInfo&& info ) {
+                repairUnscopedMessageInvariant();
+                unscoped_ids.push_back( info.sequence );
+                messages.push_back( CATCH_MOVE( info ) );
+            }
+            void addUnscopedMessage(MessageBuilder&& builder) {
+                MessageInfo info( CATCH_MOVE( builder.m_info ) );
+                info.message = builder.m_stream.str();
+                addUnscopedMessage( CATCH_MOVE( info ) );
+            }
+            void addScopedMessage(MessageInfo&& info) {
+                messages.push_back( CATCH_MOVE( info ) );
+            }
+            std::vector<MessageInfo> const& getMessages() const {
+                return messages;
+            }
+            void removeMessage( unsigned int messageId ) {
+                auto iter =
+                    std::find_if( messages.begin(),
+                                  messages.end(),
+                                  [messageId]( MessageInfo const& msg ) {
+                                      return msg.sequence == messageId;
+                                  } );
+                assert( iter != messages.end() &&
+                        "Trying to remove non-existent message." );
+                messages.erase( iter );
+            }
+            void removeUnscopedMessages() {
+                for ( const auto messageId : unscoped_ids ) {
+                    removeMessage( messageId );
+                }
+                unscoped_ids.clear();
+                g_clearMessageScopes = false;
+            }
+            void repairUnscopedMessageInvariant() {
+                if ( g_clearMessageScopes ) { removeUnscopedMessages(); }
+                g_clearMessageScopes = false;
+            }
+        };
+        CATCH_INTERNAL_START_WARNINGS_SUPPRESSION
+        CATCH_INTERNAL_SUPPRESS_GLOBALS_WARNINGS
+        static MessageHolder& g_messageHolder() {
+            static CATCH_INTERNAL_THREAD_LOCAL MessageHolder value;
+            return value;
+        }
+        CATCH_INTERNAL_STOP_WARNINGS_SUPPRESSION
+        void pushScopedMessage( MessageInfo&& message ) {
+            Detail::g_messageHolder().addScopedMessage(  CATCH_MOVE( message ) );
+        }
+        void popScopedMessage( unsigned int messageId ) {
+            Detail::g_messageHolder().removeMessage( messageId );
+        }
+        void emplaceUnscopedMessage( MessageBuilder&& builder ) {
+            Detail::g_messageHolder().addUnscopedMessage( CATCH_MOVE( builder ) );
+        }
+        void addUnscopedMessage( MessageInfo&& message ) {
+            Detail::g_messageHolder().addUnscopedMessage( CATCH_MOVE( message ) );
+        }
+        bool lastAssertionPassed() { return Detail::g_lastAssertionPassed; }
+    } 
+    RunContext::RunContext(IConfig const* _config, IEventListenerPtr&& reporter)
+    :   m_runInfo(_config->name()),
+        m_config(_config),
+        m_reporter(CATCH_MOVE(reporter)),
+        m_outputRedirect( makeOutputRedirect( m_reporter->getPreferences().shouldRedirectStdOut ) ),
+        m_abortAfterXFailedAssertions( m_config->abortAfter() ),
+        m_reportAssertionStarting( m_reporter->getPreferences().shouldReportAllAssertionStarts ),
+        m_includeSuccessfulResults( m_config->includeSuccessfulResults() || m_reporter->getPreferences().shouldReportAllAssertions ),
+        m_shouldDebugBreak( m_config->shouldDebugBreak() )
+    {
+        getCurrentMutableContext().setResultCapture( this );
+        m_reporter->testRunStarting(m_runInfo);
+        ReusableStringStream rss;
+        (void)rss;
+    }
+    RunContext::~RunContext() {
+        updateTotalsFromAtomics();
+        m_reporter->testRunEnded(TestRunStats(m_runInfo, m_totals, aborting()));
+    }
+    Totals RunContext::runTest(TestCaseHandle const& testCase) {
+        updateTotalsFromAtomics();
+        const Totals prevTotals = m_totals;
+        auto const& testInfo = testCase.getTestCaseInfo();
+        m_reporter->testCaseStarting(testInfo);
+        testCase.prepareTestCase();
+        m_activeTestCase = &testCase;
+        ITracker& rootTracker = m_trackerContext.startRun();
+        assert(rootTracker.isSectionTracker());
+        rootTracker.setFilters( &m_config->getPathFilters(),
+                                m_config->useNewFilterBehaviour() );
+        seedRng( *m_config );
+        uint64_t testRuns = 0;
+        std::string redirectedCout;
+        std::string redirectedCerr;
+        do {
+            m_trackerContext.startCycle();
+            m_testCaseTracker = &SectionTracker::acquire(m_trackerContext, TestCaseTracking::NameAndLocationRef(testInfo.name, testInfo.lineInfo));
+            m_reporter->testCasePartialStarting(testInfo, testRuns);
+            updateTotalsFromAtomics();
+            const auto beforeRunTotals = m_totals;
+            runCurrentTest();
+            std::string oneRunCout = m_outputRedirect->getStdout();
+            std::string oneRunCerr = m_outputRedirect->getStderr();
+            m_outputRedirect->clearBuffers();
+            redirectedCout += oneRunCout;
+            redirectedCerr += oneRunCerr;
+            updateTotalsFromAtomics();
+            const auto singleRunTotals = m_totals.delta(beforeRunTotals);
+            auto statsForOneRun = TestCaseStats(testInfo, singleRunTotals, CATCH_MOVE(oneRunCout), CATCH_MOVE(oneRunCerr), aborting());
+            m_reporter->testCasePartialEnded(statsForOneRun, testRuns);
+            ++testRuns;
+        } while (!m_testCaseTracker->isSuccessfullyCompleted() && !aborting());
+        Totals deltaTotals = m_totals.delta(prevTotals);
+        if (testInfo.expectedToFail() && deltaTotals.testCases.passed > 0) {
+            deltaTotals.assertions.failed++;
+            deltaTotals.testCases.passed--;
+            deltaTotals.testCases.failed++;
+        }
+        m_totals.testCases += deltaTotals.testCases;
+        testCase.tearDownTestCase();
+        m_reporter->testCaseEnded(TestCaseStats(testInfo,
+                                  deltaTotals,
+                                  CATCH_MOVE(redirectedCout),
+                                  CATCH_MOVE(redirectedCerr),
+                                  aborting()));
+        m_activeTestCase = nullptr;
+        m_testCaseTracker = nullptr;
+        return deltaTotals;
+    }
+    void RunContext::assertionEnded(AssertionResult&& result) {
+        Detail::g_lastKnownLineInfo = result.m_info.lineInfo;
+        if (result.getResultType() == ResultWas::Ok) {
+            m_atomicAssertionCount.passed++;
+            Detail::g_lastAssertionPassed = true;
+        } else if (result.getResultType() == ResultWas::ExplicitSkip) {
+            m_atomicAssertionCount.skipped++;
+            Detail::g_lastAssertionPassed = true;
+        } else if (!result.succeeded()) {
+            Detail::g_lastAssertionPassed = false;
+            if (result.isOk()) {}
+            else if( m_activeTestCase->getTestCaseInfo().okToFail() ) { 
+                m_atomicAssertionCount.failedButOk++;
+            } else {
+                m_atomicAssertionCount.failed++;
+            }
+        } else {
+            Detail::g_lastAssertionPassed = true;
+        }
+        auto& msgHolder = Detail::g_messageHolder();
+        msgHolder.repairUnscopedMessageInvariant();
+        Detail::LockGuard lock( m_assertionMutex );
+        {
+            auto _ = scopedDeactivate( *m_outputRedirect );
+            updateTotalsFromAtomics();
+            m_reporter->assertionEnded( AssertionStats( result, msgHolder.getMessages(), m_totals ) );
+        }
+        if ( result.getResultType() != ResultWas::Warning ) {
+            msgHolder.removeUnscopedMessages();
+        }
+        m_lastResult = CATCH_MOVE( result );
+    }
+    void RunContext::notifyAssertionStarted( AssertionInfo const& info ) {
+        if (m_reportAssertionStarting) {
+            Detail::LockGuard lock( m_assertionMutex );
+            auto _ = scopedDeactivate( *m_outputRedirect );
+            m_reporter->assertionStarting( info );
+        }
+    }
+    bool RunContext::sectionStarted( StringRef sectionName,
+                                     SourceLineInfo const& sectionLineInfo,
+                                     Counts& assertions ) {
+        ITracker& sectionTracker =
+            SectionTracker::acquire( m_trackerContext,
+                                     TestCaseTracking::NameAndLocationRef(
+                                         sectionName, sectionLineInfo ) );
+        if (!sectionTracker.isOpen())
+            return false;
+        m_activeSections.push_back(&sectionTracker);
+        SectionInfo sectionInfo( sectionLineInfo, static_cast<std::string>(sectionName) );
+        Detail::g_lastKnownLineInfo = sectionLineInfo;
+        {
+            auto _ = scopedDeactivate( *m_outputRedirect );
+            m_reporter->sectionStarting( sectionInfo );
+        }
+        updateTotalsFromAtomics();
+        assertions = m_totals.assertions;
+        return true;
+    }
+    IGeneratorTracker*
+    RunContext::acquireGeneratorTracker( StringRef generatorName,
+                                         SourceLineInfo const& lineInfo ) {
+        auto* tracker = Generators::GeneratorTracker::acquire(
+            m_trackerContext,
+            TestCaseTracking::NameAndLocationRef(
+                 generatorName, lineInfo ) );
+        Detail::g_lastKnownLineInfo = lineInfo;
+        return tracker;
+    }
+    IGeneratorTracker* RunContext::createGeneratorTracker(
+        StringRef generatorName,
+        SourceLineInfo lineInfo,
+        Generators::GeneratorBasePtr&& generator ) {
+        auto nameAndLoc = TestCaseTracking::NameAndLocation( static_cast<std::string>( generatorName ), lineInfo );
+        auto& currentTracker = m_trackerContext.currentTracker();
+        assert(
+            currentTracker.nameAndLocation() != nameAndLoc &&
+            "Trying to create tracker for a generator that already has one" );
+        auto newTracker =
+            Catch::Detail::make_unique<Generators::GeneratorTracker>(
+                CATCH_MOVE( nameAndLoc ),
+                m_trackerContext,
+                &currentTracker,
+                CATCH_MOVE( generator ) );
+        if ( m_config->warnAboutInfiniteGenerators() &&
+             !newTracker->m_generator->isFinite() &&
+             !newTracker->isFiltered() ) {
+            INTERNAL_CATCH_MSG( "FAIL",
+                                Catch::ResultWas::ExplicitFailure,
+                                Catch::ResultDisposition::Normal,
+                                "GENERATE() would run infinitely" );
+        }
+        auto returnPtr = newTracker.get();
+        currentTracker.addChild( CATCH_MOVE( newTracker ) );
+        returnPtr->open();
+        return returnPtr;
+    }
+    bool RunContext::testForMissingAssertions(Counts& assertions) {
+        if (assertions.total() != 0)
+            return false;
+        if (!m_config->warnAboutMissingAssertions())
+            return false;
+        if (m_trackerContext.currentTracker().hasChildren())
+            return false;
+        m_atomicAssertionCount.failed++;
+        assertions.failed++;
+        return true;
+    }
+    void RunContext::sectionEnded(SectionEndInfo&& endInfo) {
+        updateTotalsFromAtomics();
+        Counts assertions = m_totals.assertions - endInfo.prevAssertions;
+        bool missingAssertions = testForMissingAssertions(assertions);
+        if (!m_activeSections.empty()) {
+            m_activeSections.back()->close();
+            m_activeSections.pop_back();
+        }
+        {
+            auto _ = scopedDeactivate( *m_outputRedirect );
+            m_reporter->sectionEnded(
+                SectionStats( CATCH_MOVE( endInfo.sectionInfo ),
+                              assertions,
+                              endInfo.durationInSeconds,
+                              missingAssertions ) );
+        }
+    }
+    void RunContext::sectionEndedEarly(SectionEndInfo&& endInfo) {
+        if ( m_unfinishedSections.empty() ) {
+            m_activeSections.back()->fail();
+        } else {
+            m_activeSections.back()->close();
+        }
+        m_activeSections.pop_back();
+        m_unfinishedSections.push_back(CATCH_MOVE(endInfo));
+    }
+    void RunContext::benchmarkPreparing( StringRef name ) {
+        auto _ = scopedDeactivate( *m_outputRedirect );
+        m_reporter->benchmarkPreparing( name );
+    }
+    void RunContext::benchmarkStarting( BenchmarkInfo const& info ) {
+        auto _ = scopedDeactivate( *m_outputRedirect );
+        m_reporter->benchmarkStarting( info );
+    }
+    void RunContext::benchmarkEnded( BenchmarkStats<> const& stats ) {
+        auto _ = scopedDeactivate( *m_outputRedirect );
+        m_reporter->benchmarkEnded( stats );
+    }
+    void RunContext::benchmarkFailed( StringRef error ) {
+        auto _ = scopedDeactivate( *m_outputRedirect );
+        m_reporter->benchmarkFailed( error );
+    }
+    std::string RunContext::getCurrentTestName() const {
+        return m_activeTestCase
+            ? m_activeTestCase->getTestCaseInfo().name
+            : std::string();
+    }
+    const AssertionResult * RunContext::getLastResult() const {
+        Detail::LockGuard _( m_assertionMutex );
+        return &*m_lastResult;
+    }
+    void RunContext::exceptionEarlyReported() {
+        m_shouldReportUnexpected = false;
+    }
+    void RunContext::handleFatalErrorCondition( StringRef message ) {
+        {
+            Detail::LockGuard lock( m_assertionMutex );
+            auto _ = scopedDeactivate( *m_outputRedirect );
+            m_reporter->fatalErrorEncountered( message );
+        }
+        AssertionResultData tempResult( ResultWas::FatalErrorCondition, { false } );
+        tempResult.message = static_cast<std::string>(message);
+        AssertionResult result( makeDummyAssertionInfo(),
+                                CATCH_MOVE( tempResult ) );
+        assertionEnded(CATCH_MOVE(result) );
+        Detail::LockGuard lock( m_assertionMutex );
+        while (!m_activeSections.empty()) {
+            auto const& nl = m_activeSections.back()->nameAndLocation();
+            SectionEndInfo endInfo{ SectionInfo(nl.location, nl.name), {}, 0.0 };
+            sectionEndedEarly(CATCH_MOVE(endInfo));
+        }
+        handleUnfinishedSections();
+        auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
+        SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
+        Counts assertions;
+        assertions.failed = 1;
+        SectionStats testCaseSectionStats(CATCH_MOVE(testCaseSection), assertions, 0, false);
+        m_reporter->sectionEnded( testCaseSectionStats );
+        auto const& testInfo = m_activeTestCase->getTestCaseInfo();
+        Totals deltaTotals;
+        deltaTotals.testCases.failed = 1;
+        deltaTotals.assertions.failed = 1;
+        m_reporter->testCaseEnded(TestCaseStats(testInfo,
+                                  deltaTotals,
+                                  std::string(),
+                                  std::string(),
+                                  false));
+        m_totals.testCases.failed++;
+        updateTotalsFromAtomics();
+        m_reporter->testRunEnded(TestRunStats(m_runInfo, m_totals, false));
+    }
+    void RunContext::assertionPassedFastPath(SourceLineInfo lineInfo) {
+        Detail::g_lastKnownLineInfo = lineInfo;
+        ++m_atomicAssertionCount.passed;
+        Detail::g_lastAssertionPassed = true;
+        Detail::g_clearMessageScopes = true;
+    }
+    void RunContext::updateTotalsFromAtomics() {
+        m_totals.assertions = Counts{
+            m_atomicAssertionCount.passed,
+            m_atomicAssertionCount.failed,
+            m_atomicAssertionCount.failedButOk,
+            m_atomicAssertionCount.skipped,
+        };
+    }
+    bool RunContext::aborting() const {
+        return m_atomicAssertionCount.failed >= m_abortAfterXFailedAssertions;
+    }
+    void RunContext::runCurrentTest() {
+        auto const& testCaseInfo = m_activeTestCase->getTestCaseInfo();
+        SectionInfo testCaseSection(testCaseInfo.lineInfo, testCaseInfo.name);
+        m_reporter->sectionStarting(testCaseSection);
+        updateTotalsFromAtomics();
+        Counts prevAssertions = m_totals.assertions;
+        double duration = 0;
+        m_shouldReportUnexpected = true;
+        Detail::g_lastKnownLineInfo = testCaseInfo.lineInfo;
+        Timer timer;
+        CATCH_TRY {
+            {
+                auto _ = scopedActivate( *m_outputRedirect );
+                timer.start();
+                invokeActiveTestCase();
+            }
+            duration = timer.getElapsedSeconds();
+        } CATCH_CATCH_ANON (TestFailureException&) {
+        } CATCH_CATCH_ANON (TestSkipException&) {
+        } CATCH_CATCH_ALL {
+            if ( m_shouldReportUnexpected ) {
+                AssertionReaction dummyReaction;
+                handleUnexpectedInflightException( makeDummyAssertionInfo(),
+                                                   translateActiveException(),
+                                                   dummyReaction );
+            }
+        }
+        updateTotalsFromAtomics();
+        Counts assertions = m_totals.assertions - prevAssertions;
+        bool missingAssertions = testForMissingAssertions(assertions);
+        m_testCaseTracker->close();
+        handleUnfinishedSections();
+        auto& msgHolder = Detail::g_messageHolder();
+        msgHolder.removeUnscopedMessages();
+        assert( msgHolder.getMessages().empty() &&
+                "There should be no leftover messages after the test ends" );
+        SectionStats testCaseSectionStats(CATCH_MOVE(testCaseSection), assertions, duration, missingAssertions);
+        m_reporter->sectionEnded(testCaseSectionStats);
+    }
+    void RunContext::invokeActiveTestCase() {
+        FatalConditionHandlerGuard _(&m_fatalConditionhandler);
+        (void)_;
+        m_activeTestCase->invoke();
+    }
+    void RunContext::handleUnfinishedSections() {
+        for ( auto it = m_unfinishedSections.rbegin(),
+                   itEnd = m_unfinishedSections.rend();
+              it != itEnd;
+              ++it ) {
+            sectionEnded( CATCH_MOVE( *it ) );
+        }
+        m_unfinishedSections.clear();
+    }
+    void RunContext::handleExpr(
+        AssertionInfo const& info,
+        ITransientExpression const& expr,
+        AssertionReaction& reaction
+    ) {
+        bool negated = isFalseTest( info.resultDisposition );
+        bool result = expr.getResult() != negated;
+        if( result ) {
+            if (!m_includeSuccessfulResults) {
+                assertionPassedFastPath(info.lineInfo);
+            }
+            else {
+                reportExpr(info, ResultWas::Ok, &expr, negated);
+            }
+        }
+        else {
+            reportExpr(info, ResultWas::ExpressionFailed, &expr, negated );
+            populateReaction(
+                reaction, info.resultDisposition & ResultDisposition::Normal );
+        }
+    }
+    void RunContext::reportExpr(
+            AssertionInfo const &info,
+            ResultWas::OfType resultType,
+            ITransientExpression const *expr,
+            bool negated ) {
+        Detail::g_lastKnownLineInfo = info.lineInfo;
+        AssertionResultData data( resultType, LazyExpression( negated ) );
+        AssertionResult assertionResult{ info, CATCH_MOVE( data ) };
+        assertionResult.m_resultData.lazyExpression.m_transientExpression = expr;
+        assertionEnded( CATCH_MOVE(assertionResult) );
+    }
+    void RunContext::handleMessage(
+            AssertionInfo const& info,
+            ResultWas::OfType resultType,
+            std::string&& message,
+            AssertionReaction& reaction
+    ) {
+        Detail::g_lastKnownLineInfo = info.lineInfo;
+        AssertionResultData data( resultType, LazyExpression( false ) );
+        data.message = CATCH_MOVE( message );
+        AssertionResult assertionResult{ info,
+                                         CATCH_MOVE( data ) };
+        const auto isOk = assertionResult.isOk();
+        assertionEnded( CATCH_MOVE(assertionResult) );
+        if ( !isOk ) {
+            populateReaction(
+                reaction, info.resultDisposition & ResultDisposition::Normal );
+        } else if ( resultType == ResultWas::ExplicitSkip ) {
+            reaction.shouldSkip = true;
+        }
+    }
+    void RunContext::handleUnexpectedExceptionNotThrown(
+            AssertionInfo const& info,
+            AssertionReaction& reaction
+    ) {
+        handleNonExpr(info, Catch::ResultWas::DidntThrowException, reaction);
+    }
+    void RunContext::handleUnexpectedInflightException(
+            AssertionInfo const& info,
+            std::string&& message,
+            AssertionReaction& reaction
+    ) {
+        Detail::g_lastKnownLineInfo = info.lineInfo;
+        AssertionResultData data( ResultWas::ThrewException, LazyExpression( false ) );
+        data.message = CATCH_MOVE(message);
+        AssertionResult assertionResult{ info, CATCH_MOVE(data) };
+        assertionEnded( CATCH_MOVE(assertionResult) );
+        populateReaction( reaction,
+                          info.resultDisposition & ResultDisposition::Normal );
+    }
+    void RunContext::populateReaction( AssertionReaction& reaction,
+                                       bool has_normal_disposition ) const {
+        reaction.shouldDebugBreak = m_shouldDebugBreak;
+        reaction.shouldThrow = aborting() || has_normal_disposition;
+    }
+    AssertionInfo RunContext::makeDummyAssertionInfo() {
+        const bool testCaseJustStarted =
+            Detail::g_lastKnownLineInfo ==
+            m_activeTestCase->getTestCaseInfo().lineInfo;
+        return AssertionInfo{
+            testCaseJustStarted ? "TEST_CASE"_sr : StringRef(),
+            Detail::g_lastKnownLineInfo,
+            testCaseJustStarted ? StringRef() : "{Unknown expression after the reported line}"_sr,
+            ResultDisposition::Normal
+        };
+    }
+    void RunContext::handleIncomplete(
+            AssertionInfo const& info
+    ) {
+        using namespace std::string_literals;
+        Detail::g_lastKnownLineInfo = info.lineInfo;
+        AssertionResultData data( ResultWas::ThrewException, LazyExpression( false ) );
+        data.message = "Exception translation was disabled by CATCH_CONFIG_FAST_COMPILE"s;
+        AssertionResult assertionResult{ info, CATCH_MOVE( data ) };
+        assertionEnded( CATCH_MOVE(assertionResult) );
+    }
+    void RunContext::handleNonExpr(
+            AssertionInfo const &info,
+            ResultWas::OfType resultType,
+            AssertionReaction &reaction
+    ) {
+        AssertionResultData data( resultType, LazyExpression( false ) );
+        AssertionResult assertionResult{ info, CATCH_MOVE( data ) };
+        const auto isOk = assertionResult.isOk();
+        if ( isOk && !m_includeSuccessfulResults ) {
+            assertionPassedFastPath( info.lineInfo );
+            return;
+        }
+        assertionEnded( CATCH_MOVE(assertionResult) );
+        if ( !isOk ) {
+            populateReaction(
+                reaction, info.resultDisposition & ResultDisposition::Normal );
+        }
+    }
+    void seedRng(IConfig const& config) {
+        sharedRng().seed(config.rngSeed());
+    }
+    unsigned int rngSeed() {
+        return getCurrentContext().getConfig()->rngSeed();
+    }
+}
